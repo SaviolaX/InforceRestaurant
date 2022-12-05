@@ -184,78 +184,129 @@ def test_list_menu_auth_not_admin(restaurant: object, user_payload_not_admin:dic
     assert type(res.data[0]) == OrderedDict
     assert res.status_code == 200
     delete_all_temp_files()
-# # update restaurant
-# @pytest.mark.django_db
-# def test_update_rest_not_auth(rest_payload: dict) -> None:
-#     Restaurant.objects.create(**rest_payload)
-#     res = client.post(reverse('update_rest', kwargs={'pk': 1}))
-#     assert res.status_code == 401
     
-# @pytest.mark.django_db
-# def test_update_rest_auth_as_admin(rest_payload: dict, user_payload_is_admin:dict) -> None:
-#     User.objects.create_user(**user_payload_is_admin)
-#     Restaurant.objects.create(**rest_payload)
-#     user_data = client.post(reverse('login'), user_payload_is_admin, format='json')
-#     client.credentials(HTTP_AUTHORIZATION='Bearer ' + user_data.data['access'])
-#     new_payload = dict(title='Test_restaurantEdited')
-#     res = client.patch(reverse('update_rest', kwargs={'pk': 1}), new_payload, format='json')
-#     assert res.data['title'] == new_payload['title']
-#     assert res.data['id'] == 1
-#     assert res.status_code == 200
+
+# update restaurant
+@pytest.mark.django_db
+def test_update_menu_not_auth(restaurant: object) -> None:
+    assert len(Menu.objects.all()) == 0
+    Menu.objects.create(
+        title='test_menu',
+        file = SimpleUploadedFile('temp_file.pdf', b'some test content'),
+        restaurant=restaurant
+    )
+    assert len(Menu.objects.all()) == 1
+    res = client.post(reverse('update_menu', kwargs={'pk': 1}))
+    assert res.status_code == 401
+    delete_all_temp_files()
     
-# @pytest.mark.django_db
-# def test_update_rest_auth_as_admin_no_data(rest_payload: dict, user_payload_is_admin:dict) -> None:
-#     User.objects.create_user(**user_payload_is_admin)
-#     rest = Restaurant.objects.create(**rest_payload)
-#     user_data = client.post(reverse('login'), user_payload_is_admin, format='json')
-#     client.credentials(HTTP_AUTHORIZATION='Bearer ' + user_data.data['access'])
-#     res = client.patch(reverse('update_rest', kwargs={'pk': 1}), format='json')
-#     assert res.data['title'] == rest.title
-#     assert res.data['id'] == 1
-#     assert res.status_code == 200
+@pytest.mark.django_db
+def test_update_menu_auth_as_admin(restaurant: object, user_payload_as_admin: dict) -> None:
+    assert len(Menu.objects.all()) == 0
+    Menu.objects.create(
+        title='test_menu',
+        file = SimpleUploadedFile('temp_file.pdf', b'some test content'),
+        restaurant=restaurant
+    )
+    assert len(Menu.objects.all()) == 1
+    User.objects.create_user(**user_payload_as_admin)
+    user_data = client.post(reverse('login'), user_payload_as_admin, format='json')
+    client.credentials(HTTP_AUTHORIZATION='Bearer ' + user_data.data['access'])
+    temp_file = tempfile.TemporaryFile(suffix='.pdf', prefix='temp_', dir=os.path.join(settings.BASE_DIR/'media/menus'))
+    temp_file.write(b'some content')
+    temp_file.seek(0)
+    new_payload = dict(title='Test_menu_edited', file=temp_file)
+    res = client.patch(reverse('update_menu', kwargs={'pk': 1}), new_payload, format='multipart')
+    assert res.data['title'] == new_payload['title']
+    assert res.status_code == 200
+    delete_all_temp_files()
     
-# @pytest.mark.django_db
-# def test_update_rest_auth_not_admin(rest_payload: dict, user_payload_not_admin:dict) -> None:
-#     User.objects.create_user(**user_payload_not_admin)
-#     Restaurant.objects.create(**rest_payload)
-#     user_data = client.post(reverse('login'), user_payload_not_admin, format='json')
-#     client.credentials(HTTP_AUTHORIZATION='Bearer ' + user_data.data['access'])
-#     new_payload = dict(title='Test_restaurantEdited')
-#     res = client.patch(reverse('update_rest', kwargs={'pk': 1}), new_payload, format='json')
-#     assert res.data['detail'] == 'You do not have permission to perform this action.'
-#     assert res.status_code == 403
+@pytest.mark.django_db
+def test_update_menu_auth_as_admin_no_data(restaurant: object, user_payload_as_admin:dict) -> None:
+    assert len(Menu.objects.all()) == 0
+    menu = Menu.objects.create(
+        title='test_menu',
+        file = SimpleUploadedFile('temp_file.pdf', b'some test content'),
+        restaurant=restaurant
+    )
+    assert len(Menu.objects.all()) == 1
+    User.objects.create_user(**user_payload_as_admin)
+    user_data = client.post(reverse('login'), user_payload_as_admin, format='json')
+    client.credentials(HTTP_AUTHORIZATION='Bearer ' + user_data.data['access'])
+    res = client.patch(reverse('update_menu', kwargs={'pk': 1}), format='multipart')
+    assert res.data['title'] == menu.title
+    assert res.status_code == 200
+    delete_all_temp_files()
+    
+@pytest.mark.django_db
+def test_update_menu_auth_not_admin(restaurant: object, user_payload_not_admin:dict) -> None:
+    assert len(Menu.objects.all()) == 0
+    Menu.objects.create(
+        title='test_menu',
+        file = SimpleUploadedFile('temp_file.pdf', b'some test content'),
+        restaurant=restaurant
+    )
+    assert len(Menu.objects.all()) == 1
+    User.objects.create_user(**user_payload_not_admin)
+    user_data = client.post(reverse('login'), user_payload_not_admin, format='json')
+    client.credentials(HTTP_AUTHORIZATION='Bearer ' + user_data.data['access'])
+    new_payload = dict(title='test_menu_edited')
+    res = client.patch(reverse('update_rest', kwargs={'pk': 1}), new_payload, format='json')
+    assert res.data['detail'] == 'You do not have permission to perform this action.'
+    assert res.status_code == 403
+    delete_all_temp_files()
+    
+# delete restaurant
+@pytest.mark.django_db
+def test_delete_menu_not_auth(restaurant: object) -> None:
+    assert len(Menu.objects.all()) == 0
+    Menu.objects.create(
+        title='test_menu',
+        file = SimpleUploadedFile('temp_file.pdf', b'some test content'),
+        restaurant=restaurant
+    )
+    assert len(Menu.objects.all()) == 1
+    res = client.delete(reverse('delete_menu', kwargs={'pk': 1}))
+    assert res.status_code == 401
+    delete_all_temp_files()
     
     
-# # delete restaurant
-# @pytest.mark.django_db
-# def test_delete_rest_not_auth(rest_payload: dict) -> None:
-#     Restaurant.objects.create(**rest_payload)
-#     res = client.delete(reverse('delete_rest', kwargs={'pk': 1}))
-#     assert res.status_code == 401
+@pytest.mark.django_db
+def test_delete_menu_auth_as_admin(restaurant: object, user_payload_as_admin:dict) -> None:
+    assert len(Menu.objects.all()) == 0
+    Menu.objects.create(
+        title='test_menu',
+        file = SimpleUploadedFile('temp_file.pdf', b'some test content'),
+        restaurant=restaurant
+    )
+    assert len(Menu.objects.all()) == 1
+    User.objects.create_user(**user_payload_as_admin)
+    assert len(User.objects.all()) == 1
+    user_data = client.post(reverse('login'), user_payload_as_admin, format='json')
+    client.credentials(HTTP_AUTHORIZATION='Bearer ' + user_data.data['access'])
+    res = client.delete(reverse('delete_menu', kwargs={'pk': 1}))
+    assert res.status_code == 204
+    assert len(Menu.objects.all()) == 0
+    delete_all_temp_files()
     
-# @pytest.mark.django_db
-# def test_delete_rest_auth_as_admin(rest_payload: dict, user_payload_is_admin:dict) -> None:
-#     User.objects.create_user(**user_payload_is_admin)
-#     assert len(User.objects.all()) == 1
-#     Restaurant.objects.create(**rest_payload)
-#     assert len(Restaurant.objects.all()) == 1
-#     user_data = client.post(reverse('login'), user_payload_is_admin, format='json')
-#     client.credentials(HTTP_AUTHORIZATION='Bearer ' + user_data.data['access'])
-#     res = client.delete(reverse('delete_rest', kwargs={'pk': 1}))
-#     assert res.status_code == 204
-#     assert len(Restaurant.objects.all()) == 0
+@pytest.mark.django_db
+def test_delete_menu_auth_not_admin(restaurant: object, user_payload_not_admin:dict) -> None:
+    assert len(Menu.objects.all()) == 0
+    Menu.objects.create(
+        title='test_menu',
+        file = SimpleUploadedFile('temp_file.pdf', b'some test content'),
+        restaurant=restaurant
+    )
+    assert len(Menu.objects.all()) == 1
+    User.objects.create_user(**user_payload_not_admin)
+    assert len(User.objects.all()) == 1
+    user_data = client.post(reverse('login'), user_payload_not_admin, format='json')
+    client.credentials(HTTP_AUTHORIZATION='Bearer ' + user_data.data['access'])
+    res = client.delete(reverse('delete_menu', kwargs={'pk': 1}), format='json')
+    assert res.data['detail'] == 'You do not have permission to perform this action.'
+    assert res.status_code == 403
+    delete_all_temp_files()
     
-# @pytest.mark.django_db
-# def test_delete_rest_auth_not_admin(rest_payload: dict, user_payload_not_admin:dict) -> None:
-#     User.objects.create_user(**user_payload_not_admin)
-#     assert len(User.objects.all()) == 1
-#     Restaurant.objects.create(**rest_payload)
-#     assert len(Restaurant.objects.all()) == 1
-#     user_data = client.post(reverse('login'), user_payload_not_admin, format='json')
-#     client.credentials(HTTP_AUTHORIZATION='Bearer ' + user_data.data['access'])
-#     res = client.delete(reverse('delete_rest', kwargs={'pk': 1}), format='json')
-#     assert res.data['detail'] == 'You do not have permission to perform this action.'
-#     assert res.status_code == 403
     
 
 def delete_all_temp_files():
